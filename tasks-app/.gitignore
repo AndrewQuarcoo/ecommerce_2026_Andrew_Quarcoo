@@ -1,0 +1,11 @@
+
+db.live.php
+setup.live.php
+db.live.php.example
+setup.live.php.example
+
+# OS / editor noise
+.DS_Store
+*.swp
+.vscode/
+.idea/

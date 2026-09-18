@@ -1,0 +1,225 @@
+E-Commerce Lab 01 — Write-Up
+
+Course: E-Commerce
+Lab: Server Setup, CRUD App & GitHub Submission
+App: Tasks App (PHP + MySQL CRUD)
+
+
+SUBMISSION
+
+1. Live URL: http://169.239.251.102:442/~andrew.quarcoo/tasks-app/index.php
+2. Public GitHub repo: https://github.com/AndrewQuarcoo/ecommerce_2026_Andrew_Quarcoo/tree/main/tasks-app
+3. Reflection responses: below.
+
+
+WHAT I BUILT
+
+A small Tasks manager that does the full CRUD loop against a MySQL database:
+
+- Create — create.php shows a form and inserts a new task.
+- Read — index.php lists every task, newest first.
+- Update — edit.php loads a task, lets me change it, and saves it.
+- Delete — delete.php removes a task by id.
+- Connect — db.php opens the one MySQL connection every page reuses.
+- Setup — setup.php creates the database and the tasks table.
+
+Each task has a title, a description, a status (pending / in_progress / done),
+and a created_at timestamp.
+
+
+DATABASE CONNECTION — THE HEART OF THE APP
+
+Everything in this app runs through a single connection defined once in db.php.
+Instead of each page opening its own connection, every page just does
+require "db.php"; and reuses the $conn object. That keeps credentials in one
+place and means the whole app switches from "local" to "live" by editing one file.
+
+The normal connection
+
+PHP talks to MySQL through the mysqli driver. A connection needs four things:
+
+    $host    = "localhost";   // where the database server is
+    $db_user = "root";        // the database username
+    $db_pass = "";            // that user's password
+    $db_name = "tasks_app";   // which database to use
+
+    $conn = new mysqli($host, $db_user, $db_pass, $db_name);
+
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+The if ($conn->connect_error) check is important: if the credentials are wrong or
+MySQL isn't running, the app stops immediately with a clear message instead of
+throwing a confusing error on every query further down.
+
+Connecting locally (XAMPP)
+
+On my own machine I use XAMPP, which bundles Apache (the web server that runs
+PHP) and MySQL (the database) together. Locally:
+
+- $host = "localhost" — MySQL is on the same machine as PHP.
+- $db_user = "root" — XAMPP's default MySQL account.
+- $db_pass = "" — XAMPP's default MySQL password is blank.
+- $db_name = "tasks_app" — a database I create myself.
+
+Because the local root user is allowed to create databases, the local
+setup.php connects without a database name, runs
+CREATE DATABASE IF NOT EXISTS tasks_app, switches into it with select_db(),
+and then creates the tasks table. I copy the project into
+/Applications/XAMPP/xamppfiles/htdocs/, start Apache + MySQL, and load
+http://localhost/tasks-app/setup.php once to build the database.
+
+Connecting to the database on the server
+
+The live CS server is a shared host, so a few things change even though the
+code stays almost identical:
+
+- $host is still "localhost" — this surprised me at first, but MySQL runs
+  on the same server as the website, so from the app's point of view the
+  database is still "local." I don't connect to a remote IP for the database.
+- $db_user becomes my real server username instead of root.
+- $db_pass becomes the MySQL password I set myself with
+  ALTER USER '<username>'@'localhost' IDENTIFIED BY '...';.
+- $db_name becomes the real database name the host assigned me
+  (e.g. ecommerce_2026A_<username>), which I found by running
+  cat mysql_instructions.txt after SSHing in.
+
+The one other change: on shared hosting I'm not allowed to CREATE DATABASE —
+the provider already made mine. So the live setup.php drops the
+CREATE DATABASE / select_db() lines and just does require "db.php" (which is
+already pointed at my real database) and creates the tasks table only.
+
+Navigating the database
+
+I check my data two ways:
+
+- phpMyAdmin — a web UI for the database. Locally it's at
+  http://localhost/phpmyadmin; on the server it's
+  http://169.239.251.102:442/phpmyadmin. I open the database, the tasks
+  table, then Browse to watch rows appear, change, and disappear as I add, edit,
+  and delete tasks in the app. This is the fastest way to confirm the app is
+  actually writing to the database and not just looking like it worked.
+
+
+The whole point of this exercise clicked here: the app is just a friendly front
+door onto the database. Whether I add a task through the web form or check it in
+phpMyAdmin, I'm looking at the same rows in the same tasks table.
+
+
+HOW THE CRUD FLOW WORKS (COMMON TASK OPERATIONS)
+
+The app is built around ordinary "task" actions — the same things you'd expect in
+any to-do or task tracker:
+
+- Adding a task — create.php takes a title, description, and status and
+  INSERTs a new row. After saving it redirects back to the list so a page
+  refresh doesn't accidentally add the task twice.
+- Viewing tasks — index.php runs SELECT * FROM tasks ORDER BY created_at
+  DESC so the newest tasks show first, each with Edit and Delete links.
+- Editing a task — edit.php?id=N loads that one task, pre-fills the form
+  (including selecting its current status), and UPDATEs the row on save.
+- Marking progress — changing a task's status between Pending, In
+  Progress, and Done is just an edit; the status is stored as an ENUM so only
+  those three values are ever allowed.
+- Deleting a task — delete.php?id=N removes the row after a JavaScript
+  confirm() so I don't delete something by accident.
+
+Every write query uses a prepared statement (prepare + bind_param) so user
+input can't be smuggled into the SQL (SQL injection), and every value printed back
+to the page goes through htmlspecialchars() so someone can't store a <script>
+in a task title (XSS). Ids coming from the URL are run through intval() so they're
+always clean integers.
+
+
+PART 4: REFLECTION
+
+1. Initial server access and changing credentials
+
+Gaining access started with SSH: ssh -C <username>@169.239.251.102 -p 422. On the
+first login the server handed me a temporary system password and required me to
+change it immediately. I then set my MySQL password separately with
+ALTER USER '<username>'@'localhost' IDENTIFIED BY '...'; — an important detail I
+learned here is that the system password (used for SSH and FTP) and the MySQL
+password are two different credentials.
+
+Institutions enforce a mandatory password change on first login because the initial
+password is a shared secret — it was generated by an admin, possibly emailed or
+handed over in person, and may have passed through several people or systems before
+reaching me. Anyone who saw it along the way could log in as me. Forcing a change on
+first use means:
+
+- The account can't sit on a default or admin-known password that's easy to
+  guess or already leaked.
+- The user becomes the only person who knows the working credential, so actions
+  taken by the account can actually be attributed to that person (accountability).
+- It shrinks the window in which a temporary, widely-known password is valid,
+  mitigating credential-reuse and interception risks.
+
+The risk it mitigates most directly is account takeover using known/default
+credentials — one of the most common ways real systems get breached.
+
+2. An error I hit and how I diagnosed it
+
+The most useful error I ran into was a database connection failure. On the live
+server my pages loaded blank / errored because I'd left the local settings in
+db.php (root, blank password, tasks_app) instead of my real server database
+name and MySQL password. The die("Connection failed: " . $conn->connect_error)
+line printed the actual reason, which pointed me straight at the credentials.
+
+How I diagnosed it:
+
+1. Read the error message — connect_error told me it was authentication/database,
+   not my SQL or my HTML.
+2. Re-ran cat mysql_instructions.txt to confirm my exact database name.
+3. Confirmed my MySQL password by logging in manually with mysql -u <username> -p.
+4. Updated db.php with the real values and reloaded.
+
+What it taught me about error reporting: during development you want verbose
+errors (the die() message saved me), but on a live site those same messages are
+a security leak — printing database names, usernames, or file paths to any visitor
+hands attackers a map of the system. In production the right behavior is to log the
+detail server-side and show the user a generic "something went wrong" page. Web
+servers deliberately draw this line between what the developer sees (full stack
+traces, in logs or a dev environment) and what the end user sees (a friendly,
+information-free message). The lab's die() calls are fine for a class exercise, but
+a real deployment would hide them.
+
+3. Local development vs. deploying to a live shared server
+
+Developing on XAMPP felt frictionless: I'm root, the MySQL password is blank, I
+can create databases at will, only I can reach the site, and errors print straight
+to the screen. Moving to a live shared server changed the rules in several ways:
+
+Technical
+- I can't create databases — the host makes one for me, so setup.php had to
+  drop CREATE DATABASE.
+- Credentials are real and specific: a proper username, a MySQL password I set, and
+  an assigned database name — no more root / blank.
+- I'm on a non-standard port (:442 for the web, 422 for SSH, 421 for FTP)
+  and my site lives under ~/tasks-app in public_html, so URLs and paths differ
+  from local.
+- File permissions actually matter (chmod -R 755) because the web server, not
+  me, runs the files — locally that rarely comes up.
+
+Security
+- The site is now reachable by anyone on the internet, so the prepared
+  statements and htmlspecialchars() stop being "nice to have" and become the thing
+  standing between me and SQL injection / XSS from real strangers.
+- Verbose errors must be hidden (see Q2) so I don't leak the database name or
+  structure.
+- Credentials must not be committed to GitHub — the live db.php holds a real
+  password, so that value can't go in a public repo.
+- FTP here is insecure (plain FTP, with a warning to click through), so the
+  password travels unencrypted — a reminder that on a shared box other users and the
+  network are part of the threat model.
+
+Otherwise
+- On a shared server I'm one tenant among many: resource limits, someone else's
+  misconfiguration, and the host's policies all affect me in ways they never did on
+  my own machine.
+
+The big lesson: code that "works on my machine" is only half the job. The moment it
+leaves my laptop, the environment, the permissions, the credentials, and the fact
+that untrusted people can reach it all become part of whether it actually works —
+and whether it's safe.
