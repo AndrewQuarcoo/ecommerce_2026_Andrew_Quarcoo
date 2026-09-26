@@ -110,9 +110,24 @@ UPDATE customer SET user_role = 1 WHERE customer_email = 'you@example.com';
 
 ## 🔒 Security summary
 
-- Every SQL query with user input uses **prepared statements**.
-- Passwords stored with **bcrypt** (`password_hash` / `password_verify`).
-- All forms validate on **both** client (`js/validate.js`) and server.
-- Uploaded images validated by **MIME type + size** server-side.
-- Admin pages call `require_admin()` **before any output**.
-- Session cookie hardened (`HttpOnly`, `SameSite=Lax`).
+- **SQL injection** — every query with user input uses **prepared statements**.
+- **Passwords** — stored with **bcrypt** (`password_hash` / `password_verify`);
+  hashes are never sent to any view.
+- **XSS** — all output escaped with `htmlspecialchars`; a **Content-Security-Policy**
+  (`script-src 'self'`) plus `X-Content-Type-Options`, `X-Frame-Options: DENY` and
+  `Referrer-Policy` are sent on every page.
+- **CSRF** — every state-changing POST form carries a per-session token, verified
+  server-side with a timing-safe comparison (`hash_equals`).
+- **Session security** — cookie is `HttpOnly` + `SameSite=Lax`; the session id is
+  **regenerated on login** (defeats session fixation).
+- **Input validation** — client (`js/validate.js` regex) **and** server; ids are
+  validated as positive integers, contact as a digit pattern, country against a
+  server-side whitelist.
+- **Open redirect** — the post-login "return to" target is followed only when it is
+  a safe same-site path; `redirect()` strips CR/LF to block header injection.
+- **File uploads** — validated by **MIME type + size**; the saved extension is
+  derived from the detected MIME (never the user's filename), so an executable
+  name can't be smuggled in.
+- **Authorization (row-level)** — the account page reads only the logged-in user's
+  own row (keyed by the session), and every admin page/action calls
+  `require_admin()` **before any output**.
