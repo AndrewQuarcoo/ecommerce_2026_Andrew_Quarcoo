@@ -12,6 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect(app_url('views/login.php'));
 }
 
+if (!verify_csrf()) {
+    redirect(app_url('views/login.php'));
+}
+
 $email = trim(strip_tags($_POST['login_email'] ?? ''));
 $pass  = $_POST['login_pass'] ?? '';
 
@@ -26,16 +30,18 @@ $result = $controller->login($email, $pass);
 // A successful login returns the customer row (has customer_id); failure
 // returns ['success' => false, 'error' => ...].
 if (isset($result['customer_id'])) {
+    regenerate_session(); // defeat session fixation on login
     $_SESSION['customer_id']    = $result['customer_id'];
     $_SESSION['customer_name']  = $result['customer_name'];
     $_SESSION['customer_email'] = $result['customer_email'];
     $_SESSION['user_role']      = $result['user_role'];
     $_SESSION['success']        = 'Welcome back, ' . $result['customer_name'] . '!';
 
-    // Bounce back to the page they were trying to reach, if any.
+    // Bounce back to the page they were trying to reach — but only if it's a
+    // safe same-site path (guards against open-redirect abuse).
     $back = $_SESSION['redirect_after_login'] ?? null;
     unset($_SESSION['redirect_after_login']);
-    if ($back) {
+    if (is_safe_local_url($back)) {
         redirect($back);
     }
     redirect(app_url('index.php'));

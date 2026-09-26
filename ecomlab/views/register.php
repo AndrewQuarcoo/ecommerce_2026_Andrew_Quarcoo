@@ -30,6 +30,7 @@ require_once __DIR__ . '/layout/header.php';
 
     <form id="register-form" action="<?php echo app_url('actions/register_action.php'); ?>"
           method="POST" enctype="multipart/form-data" novalidate>
+        <?php echo csrf_field(); ?>
 
         <div class="form-row">
             <label for="customer_name">Full Name</label>

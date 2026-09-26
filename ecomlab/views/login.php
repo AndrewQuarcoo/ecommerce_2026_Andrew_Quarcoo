@@ -18,6 +18,7 @@ require_once __DIR__ . '/layout/header.php';
     <?php require __DIR__ . '/layout/flash.php'; ?>
 
     <form id="login-form" action="<?php echo app_url('actions/login_action.php'); ?>" method="POST" novalidate>
+        <?php echo csrf_field(); ?>
         <div class="form-row">
             <label for="login_email">Email</label>
             <input type="email" id="login_email" name="login_email" maxlength="50">

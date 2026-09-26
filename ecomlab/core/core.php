@@ -32,6 +32,18 @@ if (session_status() === PHP_SESSION_NONE) {
 
 date_default_timezone_set('Africa/Accra');
 
+// Security response headers (sent before any body output; safe under ob_start).
+// script-src 'self' blocks inline/injected <script>, the main XSS lever; inline
+// style attributes are allowed (low risk) so existing markup keeps working.
+if (!headers_sent()) {
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: DENY');
+    header('Referrer-Policy: same-origin');
+    header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; "
+         . "style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; "
+         . "base-uri 'self'; frame-ancestors 'none'");
+}
+
 require_once __DIR__ . '/db_class.php';
 
 /**
@@ -65,12 +77,74 @@ function get_ip()
 
 /**
  * Redirect to $url and stop the script. Always exit after a redirect so
- * no further code runs.
+ * no further code runs. CR/LF are stripped defensively against header
+ * injection (PHP blocks it too, but belt-and-suspenders).
  */
 function redirect($url)
 {
+    $url = str_replace(["\r", "\n", "\0"], '', (string) $url);
     header('Location: ' . $url);
     exit;
+}
+
+/**
+ * Is $url a safe same-site path? Used to vet the "redirect back after login"
+ * target so an attacker can't craft a link that bounces the user off-site
+ * (open redirect). Must be a rooted path ("/…"), not protocol-relative
+ * ("//evil"), not absolute ("http://…"), no backslashes.
+ */
+function is_safe_local_url($url)
+{
+    return is_string($url) && $url !== ''
+        && $url[0] === '/'
+        && strncmp($url, '//', 2) !== 0
+        && strpos($url, '\\') === false
+        && strpos($url, "\r") === false
+        && strpos($url, "\n") === false;
+}
+
+// ── CSRF protection ──────────────────────────────────────────
+/** Current session CSRF token, created on first use. */
+function csrf_token()
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/** Hidden input carrying the CSRF token — drop into every POST form. */
+function csrf_field()
+{
+    return '<input type="hidden" name="csrf_token" value="'
+         . htmlspecialchars(csrf_token(), ENT_QUOTES) . '">';
+}
+
+/**
+ * Validate the CSRF token on a POST. On failure, sets a flash error and
+ * returns false (the caller redirects). Uses hash_equals (timing-safe).
+ */
+function verify_csrf()
+{
+    $sent = $_POST['csrf_token'] ?? '';
+    if (!is_string($sent) || $sent === ''
+        || empty($_SESSION['csrf_token'])
+        || !hash_equals($_SESSION['csrf_token'], $sent)) {
+        $_SESSION['error'] = 'Security check failed. Please refresh and try again.';
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Regenerate the session id (keeps session data) — call right after a
+ * successful login to defeat session fixation.
+ */
+function regenerate_session()
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
 }
 
 /** True if a customer is logged in. */

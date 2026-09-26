@@ -14,6 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect(app_url('views/register.php'));
 }
 
+// Reject forged cross-site submissions.
+if (!verify_csrf()) {
+    redirect(app_url('views/register.php'));
+}
+
 /** Trim + strip tags on a posted field. */
 function clean($key)
 {
@@ -40,8 +45,11 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 50) {
 if (strlen($pass) < 8 || !preg_match('/\d/', $pass)) {
     $errors[] = 'Password must be at least 8 characters and include a number.';
 }
-if ($country === '' || mb_strlen($country) > 30) {
-    $errors[] = 'Country is required.';
+// Country must be one of the values offered by the form (whitelist).
+$allowedCountries = ['Ghana', 'Nigeria', 'Kenya', 'South Africa', 'United States',
+                     'United Kingdom', 'Canada', 'Germany', 'France', 'India', 'Other'];
+if (!in_array($country, $allowedCountries, true)) {
+    $errors[] = 'Please select a valid country.';
 }
 if ($city === '' || mb_strlen($city) > 30) {
     $errors[] = 'City is required.';
@@ -60,18 +68,26 @@ if (!empty($_FILES['customer_image']['name']) && $_FILES['customer_image']['erro
     if ($file['error'] !== UPLOAD_ERR_OK) {
         $errors[] = 'Image upload failed. Please try a different file.';
     } else {
-        $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        // Map allowed MIME types to a safe, server-chosen extension. The
+        // extension is NEVER taken from the user-supplied filename — that
+        // prevents saving an executable name (e.g. "evil.php") that a real
+        // image could otherwise smuggle past the MIME check.
+        $allowed = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
+            'image/webp' => 'webp',
+        ];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime  = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
 
-        if (!in_array($mime, $allowed, true)) {
+        if (!isset($allowed[$mime])) {
             $errors[] = 'Profile image must be JPG, PNG, GIF or WEBP.';
         } elseif ($file['size'] > 2 * 1024 * 1024) {
             $errors[] = 'Profile image must be 2 MB or smaller.';
         } else {
-            $ext       = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $imageName = uniqid('cust_', true) . '.' . strtolower($ext);
+            $imageName = uniqid('cust_', true) . '.' . $allowed[$mime];
             $dest      = __DIR__ . '/../images/customers/' . $imageName;
             if (!move_uploaded_file($file['tmp_name'], $dest)) {
                 $errors[] = 'Could not save the profile image.';
@@ -115,6 +131,7 @@ if (!empty($result['success'])) {
     // Log the new customer straight in.
     $customer = (new CustomerController())->login($email, $pass);
     if (isset($customer['customer_id'])) {
+        regenerate_session(); // defeat session fixation on privilege change
         $_SESSION['customer_id']    = $customer['customer_id'];
         $_SESSION['customer_name']  = $customer['customer_name'];
         $_SESSION['customer_email'] = $customer['customer_email'];
