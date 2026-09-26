@@ -1,0 +1,11 @@
+# shoppn — Apache config for the app directory.
+#
+# NOTE: the ErrorDocument path is environment-specific (it is a server-relative
+# URL). This committed value targets local XAMPP (/ecomlab). The deployment
+# step rewrites it to the live user-dir path (/~andrew.quarcoo/ecomlab).
+
+# Friendly, on-brand 404 page.
+ErrorDocument 404 /ecomlab/404.php
+
+# Don't expose directory listings for folders without an index file.
+Options -Indexes
