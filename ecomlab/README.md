@@ -41,6 +41,21 @@ ecomlab/
 - **Task 4 — Login + access control:** `password_verify()`, session management, and
   `is_logged_in()` / `is_admin()` / `require_login()` / `require_admin()` guards.
 
+## Tasks 5–8 (admin brands & categories)
+
+- **Task 5 — Add Brand:** `ProductClass::addBrand()/getAllBrands()`,
+  `ProductController`, `actions/add_brand_action.php` (require_admin, POST-only),
+  `views/admin/brand.php` (form + table with Edit buttons).
+- **Task 6 — Edit Brand:** `getBrandById()/updateBrand()`,
+  `actions/update_brand_action.php`, `brand.php` handles `?edit_id=N` prefill.
+- **Task 7 — Add Category:** mirrors Task 5 — `addCategory()/getAllCategories()`,
+  `add_category_action.php`, `views/admin/category.php`.
+- **Task 8 — Edit Category:** `getCategoryById()/updateCategory()`,
+  `update_category_action.php`, same `?edit_id=N` pattern.
+
+The header shows **Brands** / **Categories** nav links only when `is_admin()`.
+The sidebar now lists live categories and brands via `ProductController`.
+
 ## Local setup (XAMPP)
 
 1. Start **Apache** and **MySQL** from the XAMPP app.
