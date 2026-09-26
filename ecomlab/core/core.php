@@ -111,17 +111,38 @@ function require_admin()
 
 /**
  * Build an absolute-from-app-root URL so links work no matter how deep the
- * current script sits (views/, views/admin/, actions/, ...). Detects the
- * app's base path from this file's location.
+ * current script sits (views/, views/admin/, actions/, ...).
+ *
+ * Works under a standard document root (XAMPP htdocs → /ecomlab) AND under
+ * Apache mod_userdir on the live server (→ /~andrew.quarcoo/ecomlab), where
+ * the app lives outside DOCUMENT_ROOT. The base is derived by comparing the
+ * running script's filesystem path (SCRIPT_FILENAME) with its URL path
+ * (SCRIPT_NAME): whatever prefix of the URL maps to the app root is the base.
  */
 function app_url($path = '')
 {
     static $base = null;
     if ($base === null) {
-        // core/ lives one level below the app root.
-        $docRoot   = str_replace('\\', '/', rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/'));
-        $appRoot   = str_replace('\\', '/', dirname(__DIR__));
-        $base      = rtrim(str_replace($docRoot, '', $appRoot), '/');
+        $base      = '';
+        $appRootFs = str_replace('\\', '/', dirname(__DIR__)); // core/ is one level below app root
+        $scriptFs  = str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME'] ?? '');
+        $scriptUrl = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+
+        // Primary: strip the script's path-below-app-root off its URL path.
+        if ($scriptFs !== '' && $scriptUrl !== '' && strpos($scriptFs, $appRootFs) === 0) {
+            $rel = substr($scriptFs, strlen($appRootFs)); // e.g. /views/login.php
+            if ($rel !== '' && substr($scriptUrl, -strlen($rel)) === $rel) {
+                $base = rtrim(substr($scriptUrl, 0, strlen($scriptUrl) - strlen($rel)), '/');
+            }
+        }
+
+        // Fallback: derive from DOCUMENT_ROOT when the app sits under it.
+        if ($base === '') {
+            $docRoot = str_replace('\\', '/', rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/'));
+            if ($docRoot !== '' && strpos($appRootFs, $docRoot) === 0) {
+                $base = rtrim(str_replace($docRoot, '', $appRootFs), '/');
+            }
+        }
     }
     return $base . '/' . ltrim($path, '/');
 }
