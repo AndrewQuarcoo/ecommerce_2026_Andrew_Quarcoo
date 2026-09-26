@@ -9,6 +9,9 @@ require_once __DIR__ . '/../controllers/ProductController.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect(app_url('views/admin/category.php'));
 }
+if (!verify_csrf()) {
+    redirect(app_url('views/admin/category.php'));
+}
 
 $id   = filter_input(INPUT_POST, 'cat_id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $name = trim(strip_tags($_POST['cat_name'] ?? ''));

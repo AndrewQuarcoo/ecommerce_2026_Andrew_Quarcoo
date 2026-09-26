@@ -26,6 +26,7 @@ require_once __DIR__ . '/../layout/header.php';
 
     <?php if ($editBrand): ?>
         <form action="<?php echo app_url('actions/update_brand_action.php'); ?>" method="POST">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="brand_id" value="<?php echo (int) $editBrand['brand_id']; ?>">
             <div class="form-row">
                 <label for="brand_name">Brand name</label>
@@ -37,6 +38,7 @@ require_once __DIR__ . '/../layout/header.php';
         </form>
     <?php else: ?>
         <form action="<?php echo app_url('actions/add_brand_action.php'); ?>" method="POST">
+            <?php echo csrf_field(); ?>
             <div class="form-row">
                 <label for="brand_name">Brand name</label>
                 <input type="text" id="brand_name" name="brand_name" maxlength="100"

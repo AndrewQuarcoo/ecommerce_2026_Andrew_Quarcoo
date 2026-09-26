@@ -25,6 +25,7 @@ require_once __DIR__ . '/../layout/header.php';
 
     <?php if ($editCat): ?>
         <form action="<?php echo app_url('actions/update_category_action.php'); ?>" method="POST">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="cat_id" value="<?php echo (int) $editCat['cat_id']; ?>">
             <div class="form-row">
                 <label for="cat_name">Category name</label>
@@ -36,6 +37,7 @@ require_once __DIR__ . '/../layout/header.php';
         </form>
     <?php else: ?>
         <form action="<?php echo app_url('actions/add_category_action.php'); ?>" method="POST">
+            <?php echo csrf_field(); ?>
             <div class="form-row">
                 <label for="cat_name">Category name</label>
                 <input type="text" id="cat_name" name="cat_name" maxlength="100"

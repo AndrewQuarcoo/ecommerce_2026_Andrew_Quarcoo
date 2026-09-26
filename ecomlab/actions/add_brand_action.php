@@ -10,6 +10,9 @@ require_once __DIR__ . '/../controllers/ProductController.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect(app_url('views/admin/brand.php'));
 }
+if (!verify_csrf()) {
+    redirect(app_url('views/admin/brand.php'));
+}
 
 $name = trim(strip_tags($_POST['brand_name'] ?? ''));
 if ($name === '' || mb_strlen($name) > 100) {
