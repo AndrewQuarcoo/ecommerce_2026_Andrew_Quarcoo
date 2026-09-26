@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Local uploaded files (keep the folders, not their contents)
+images/products/*
+images/customers/*
+!images/products/.gitkeep
+!images/customers/.gitkeep
+
+# Runtime error log (keep the folder, not the log)
+error/*.log
