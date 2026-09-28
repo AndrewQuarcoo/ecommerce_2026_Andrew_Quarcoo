@@ -9,3 +9,7 @@ images/customers/*
 
 # Runtime error log (keep the folder, not the log)
 error/*.log
+
+# Database credentials — never commit these (see Task 1 in the lab handout).
+# Copy core/db_cred.example.php to core/db_cred.php and fill in your own values.
+core/db_cred.php
