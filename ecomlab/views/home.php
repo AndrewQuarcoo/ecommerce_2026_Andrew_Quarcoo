@@ -29,10 +29,6 @@ require_once __DIR__ . '/layout/header.php';
             <?php endif; ?>
         </div>
 
-        <div class="notice">
-            <p>The product catalogue lands in a later task. Registration, login and the
-               admin brand/category tools are live now.</p>
-        </div>
     </section>
 </div>
 <?php require_once __DIR__ . '/layout/footer.php'; ?>
