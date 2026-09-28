@@ -15,8 +15,12 @@ require_once __DIR__ . '/db_cred.php';
 
 class Database
 {
-    /** PDO connection — private so only this class touches it directly. */
-    private $conn;
+    /**
+     * PDO connection. `protected` as the handout specifies, so a child Model
+     * can reach it directly if it ever needs to — though in practice they all
+     * go through fetchAll()/fetchOne()/execute() below.
+     */
+    protected $conn;
 
     public function __construct()
     {

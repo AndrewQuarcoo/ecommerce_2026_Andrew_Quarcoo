@@ -1,11 +1,13 @@
 <?php
 /**
- * db_cred.php — database connection credentials, in one place.
+ * db_cred.example.php — template for the real credentials file.
  *
- * Keeping the credentials here (not inside db_class.php) means you only
- * change them in one spot when moving between local XAMPP and the live
- * server. This file is git-ignored on the live server so real passwords
- * never reach the repository.
+ * The real file (core/db_cred.php) is git-ignored so passwords never reach
+ * the repository. To set up a fresh checkout:
+ *
+ *     cp core/db_cred.example.php core/db_cred.php
+ *
+ * then edit the values below to match your machine.
  *
  * Local XAMPP defaults: user "root", empty password, database "shoppn".
  */

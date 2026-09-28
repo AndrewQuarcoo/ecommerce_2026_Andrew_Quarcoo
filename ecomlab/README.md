@@ -22,7 +22,6 @@ ecomlab/
   views/      home.php · register.php · login.php
               layout/ (header, footer, sidebar, flash)
               account/ (my_account.php)
-              admin/  (brands & categories — tasks 5–8 branch)
   css/        style.css
   js/         validate.js
   images/     products/ · customers/
@@ -31,10 +30,18 @@ ecomlab/
   index.php · logout.php
 ```
 
+Folders for later tasks (`views/admin/`, `classes/ProductClass.php`, the cart and
+checkout views) are intentionally absent — this branch stops at Task 4.
+
 ## Tasks 1–4 (this branch)
 
 - **Task 1 — Database:** `database/shoppn.sql` (improved: utf8mb4, `customer_address`,
   `DECIMAL` money, `created_at`, unique constraints). Import and set `core/db_cred.php`.
+
+  > **Import this file, not an older copy of the handout schema.** The register
+  > form has an Address field (required by Task 3), so `customer` needs the
+  > `customer_address` column. Importing the original handout SQL instead gives
+  > `Unknown column 'customer_address'` the first time anyone registers.
 - **Task 2 — Scaffold + core:** PDO base class, session/helpers, shared layout, home page, logout.
 - **Task 3 — Registration:** form → JS validation → action → controller → model → DB, with
   server-side sanitisation, `password_hash()`, optional image upload, duplicate-email check.
@@ -48,7 +55,11 @@ ecomlab/
    ```bash
    /Applications/XAMPP/xamppfiles/bin/mysql -u root < database/shoppn.sql
    ```
-3. Confirm `core/db_cred.php` points at your local DB (`root` / blank / `shoppn`).
+3. Create your credentials file (it is git-ignored, so a fresh clone has none):
+   ```bash
+   cp core/db_cred.example.php core/db_cred.php
+   ```
+   then confirm it points at your local DB (`root` / blank / `shoppn`).
 4. Browse to <http://localhost/ecomlab/>.
 
 ## Make an admin
@@ -57,7 +68,8 @@ Every signup is a customer (`user_role = 2`). Promote one to admin:
 ```sql
 UPDATE customer SET user_role = 1 WHERE customer_email = 'you@example.com';
 ```
-Log out and back in — the Admin links appear (tasks 5–8 branch).
+Log out and back in. `is_admin()` now returns true; the admin pages themselves
+arrive in Tasks 5–8.
 
 ## Security notes
 
