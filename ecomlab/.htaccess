@@ -1,0 +1,5 @@
+# shoppn — Apache config for the app directory.
+
+# Don't expose directory listings for folders without an index file
+# (views/, actions/, core/, …).
+Options -Indexes

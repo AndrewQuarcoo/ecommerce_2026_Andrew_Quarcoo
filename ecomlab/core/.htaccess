@@ -1,0 +1,14 @@
+# core/ holds the DB credentials and shared bootstrap. Nothing in here is
+# ever meant to be requested directly over HTTP — it is only ever included
+# by a page one level up. Deny web access outright.
+#
+# db_cred.php is a .php file, so Apache executes it and the response body is
+# empty even without this rule; denying access is defence in depth, in case
+# PHP handling is ever misconfigured and the file would be served as text.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
