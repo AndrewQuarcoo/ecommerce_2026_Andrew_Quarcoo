@@ -34,8 +34,10 @@ if (!function_exists('is_logged_in')) {
         <nav class="main-nav">
             <a href="<?php echo app_url('index.php'); ?>">Home</a>
 
+            <?php /* Tasks 5–8: admin-only links — hidden entirely from customers and guests. */ ?>
             <?php if (is_admin()): ?>
-                <!-- Admin links (Brands / Categories) are added on the tasks 5–8 branch. -->
+                <a href="<?php echo app_url('views/admin/brand.php'); ?>">Brands</a>
+                <a href="<?php echo app_url('views/admin/category.php'); ?>">Categories</a>
             <?php endif; ?>
 
             <?php if (is_logged_in()): ?>

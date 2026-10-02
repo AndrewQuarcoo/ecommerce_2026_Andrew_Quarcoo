@@ -3,20 +3,14 @@
  * sidebar.php — categories & brands navigation.
  *
  * MVC note: a View asks the Controller for data — it never runs SQL itself.
- * ProductController is introduced on the tasks 5–8 branch; until it exists
- * this sidebar degrades gracefully to empty lists (the tables are empty in
- * the auth-only build anyway).
+ * The lists come from the same ProductController methods the admin pages use
+ * (Tasks 5 & 7), so whatever an admin adds shows up here immediately.
  */
-$categories = [];
-$brands     = [];
+require_once __DIR__ . '/../../controllers/ProductController.php';
 
-$productControllerFile = __DIR__ . '/../../controllers/ProductController.php';
-if (file_exists($productControllerFile)) {
-    require_once $productControllerFile;
-    $productController = new ProductController();
-    $categories = $productController->getAllCategories();
-    $brands     = $productController->getAllBrands();
-}
+$productController = new ProductController();
+$categories = $productController->getAllCategories();
+$brands     = $productController->getAllBrands();
 ?>
 <aside class="sidebar">
     <section class="sidebar-block">
