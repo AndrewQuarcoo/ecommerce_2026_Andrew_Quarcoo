@@ -49,6 +49,8 @@ require_once __DIR__ . '/layout/header.php';
         <div class="form-row">
             <label for="customer_pass">Password</label>
             <input type="password" id="customer_pass" name="customer_pass">
+            <p class="hint">At least 8 characters, including an uppercase letter,
+               a lowercase letter, a number and a special character.</p>
             <div class="field-error" id="error-pass"></div>
         </div>
 

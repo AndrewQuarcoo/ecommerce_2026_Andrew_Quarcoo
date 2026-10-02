@@ -7,7 +7,12 @@
 // ── Shared regex patterns ──
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^[0-9+\-\s]{7,15}$/;
-const passRegex  = /^(?=.*\d).{8,}$/;   // >=8 chars, at least one digit
+// Strong password: >=8 chars AND at least one lowercase, one uppercase,
+// one digit and one special character. The lookaheads each assert "somewhere
+// in the string there is one of these" without consuming any characters, so
+// they can all apply to the same 8+ characters. This rejects weak-but-long
+// passwords like "12345678" or "password".
+const passRegex  = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,72}$/;
 const nameRegex  = /^.{2,100}$/;
 
 const IMG_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -57,7 +62,7 @@ if (registerForm) {
         ok &= setError('customer_email', 'error-email',
             v.email(val('customer_email')) ? '' : 'Enter a valid email address.');
         ok &= setError('customer_pass', 'error-pass',
-            v.pass(val('customer_pass')) ? '' : 'At least 8 characters and one number.');
+            v.pass(val('customer_pass')) ? '' : passMessage(val('customer_pass')));
         ok &= setError('customer_country', 'error-country',
             v.country(val('customer_country')) ? '' : 'Please select a country.');
         ok &= setError('customer_city', 'error-city',
@@ -83,6 +88,21 @@ if (registerForm) {
             showLoading('register-submit', 'Creating account…');
         }
     });
+}
+
+/**
+ * Name the requirements a password is still missing, so the user is told
+ * exactly what to fix rather than just "invalid password".
+ */
+function passMessage(pass) {
+    const missing = [];
+    if (pass.length < 8)          missing.push('8 characters');
+    if (!/[a-z]/.test(pass))      missing.push('a lowercase letter');
+    if (!/[A-Z]/.test(pass))      missing.push('an uppercase letter');
+    if (!/\d/.test(pass))         missing.push('a number');
+    if (!/[^A-Za-z0-9]/.test(pass)) missing.push('a special character (e.g. !?$#)');
+    if (pass.length > 72)         return 'Password must be 72 characters or fewer.';
+    return 'Password needs at least ' + missing.join(', ') + '.';
 }
 
 // ── Login form ──

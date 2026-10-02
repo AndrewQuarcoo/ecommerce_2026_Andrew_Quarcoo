@@ -42,8 +42,32 @@ if ($name === '' || mb_strlen($name) > 100) {
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 50) {
     $errors[] = 'A valid email is required (max 50 characters).';
 }
-if (strlen($pass) < 8 || !preg_match('/\d/', $pass)) {
-    $errors[] = 'Password must be at least 8 characters and include a number.';
+// Password strength. The same rule is enforced in js/validate.js for instant
+// feedback, but this server-side check is the one that actually protects the
+// account: JS can always be bypassed. Each requirement is reported separately
+// so the user knows exactly what to fix.
+// Upper bound is 72 bytes because bcrypt silently ignores anything past that
+// — better to reject a too-long password than to store a truncated one.
+$passErrors = [];
+if (strlen($pass) < 8) {
+    $passErrors[] = '8 characters';
+}
+if (!preg_match('/[a-z]/', $pass)) {
+    $passErrors[] = 'a lowercase letter';
+}
+if (!preg_match('/[A-Z]/', $pass)) {
+    $passErrors[] = 'an uppercase letter';
+}
+if (!preg_match('/\d/', $pass)) {
+    $passErrors[] = 'a number';
+}
+if (!preg_match('/[^A-Za-z0-9]/', $pass)) {
+    $passErrors[] = 'a special character';
+}
+if (strlen($pass) > 72) {
+    $errors[] = 'Password must be 72 characters or fewer.';
+} elseif ($passErrors) {
+    $errors[] = 'Password needs at least ' . implode(', ', $passErrors) . '.';
 }
 // Country must be one of the values offered by the form (whitelist).
 $allowedCountries = ['Ghana', 'Nigeria', 'Kenya', 'South Africa', 'United States',
