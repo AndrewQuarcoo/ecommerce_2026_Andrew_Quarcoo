@@ -1,2 +1,6 @@
 .DS_Store
 access/
+
+# The lab submission file is uploaded to the LMS, not committed. It contains
+# the demo admin login for the live server, and this repository is public.
+SUBMISSION.txt
