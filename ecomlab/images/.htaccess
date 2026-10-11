@@ -1,0 +1,38 @@
+# images/ holds files uploaded by users. Nothing in here may ever be executed.
+#
+# This is the most important file in the project. An audit of the live server
+# showed that a .php file placed in images/products/ DID run. The upload code
+# already makes that unreachable — the saved extension is derived from the
+# MIME type finfo reads out of the file's own bytes, never from the name the
+# user supplied — but that made one piece of code the only thing standing
+# between an upload form and remote code execution. This removes the
+# execution itself, so a future bug in that logic is a bug, not a breach.
+
+# 1. Turn the PHP interpreter off outright (mod_php only; harmless elsewhere).
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# 2. Unhook the handlers. php_flag does nothing under CGI/FPM, so this is the
+#    part that matters when PHP is not loaded as an Apache module.
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .pht
+Options -ExecCGI -Indexes
+
+# 3. And refuse the request anyway. Note this DENIES rather than serving the
+#    file as text/plain — the usual "AddType text/plain" trick would stop
+#    execution but hand over the source instead.
+<FilesMatch "\.(?i:php[0-9]?|pht|phtml|phps|cgi|pl|py|sh|lua|asp|aspx|jsp|htaccess)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
