@@ -110,7 +110,10 @@ function is_safe_local_url($url)
  */
 function money($amount)
 {
-    return 'GH\u{20B5} ' . number_format((float) $amount, 2);
+    // The cedi sign is written literally rather than as \u{20B5}: that escape
+    // is only interpreted inside DOUBLE-quoted PHP strings, so in single
+    // quotes it would print the seven characters \u{20B5} on every price.
+    return 'GH₵ ' . number_format((float) $amount, 2);
 }
 
 /**
