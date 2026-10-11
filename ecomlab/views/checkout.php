@@ -72,6 +72,7 @@ require_once __DIR__ . '/layout/header.php';
 
         <p class="cart-buttons">
             <a class="btn" href="<?php echo app_url('views/cart.php'); ?>">Back to Cart</a>
+            <a class="btn" href="<?php echo app_url('views/payment.php'); ?>">Proceed to Payment</a>
         </p>
     </section>
 </div>

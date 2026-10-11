@@ -127,4 +127,122 @@ class Cart extends Database
     {
         return $this->execute('DELETE FROM cart WHERE ip_add = ?', [$ip]);
     }
+
+    // ── Orders & payment (Task 13) ───────────────────────────
+
+    /**
+     * Turn the cart into a paid order, atomically.
+     *
+     * Five steps that must all happen or none: generate an invoice number,
+     * record the order, copy the cart lines into orderdetails, record the
+     * payment, then empty the cart. A transaction is what makes "or none"
+     * true — without it, a failure half way through could take the customer's
+     * money and leave them with no order, or clear the cart with nothing
+     * recorded.
+     *
+     * The caller must already have verified the payment with Paystack.
+     *
+     * @return int|false the new order id, or false if anything failed
+     */
+    public function processPayment($customerId, $ip, $reference, $amount)
+    {
+        $conn = $this->getConnection();
+        $conn->beginTransaction();
+
+        try {
+            $items = $this->getCartItems($ip);
+            if (!$items) {
+                $conn->rollBack();
+                return false;
+            }
+
+            // invoice_no is UNIQUE, so a random collision must be retried
+            // rather than allowed to abort the whole order.
+            $invoice = null;
+            for ($try = 0; $try < 10; $try++) {
+                $candidate = mt_rand(100000, 999999);
+                $taken = $this->fetchOne('SELECT order_id FROM orders WHERE invoice_no = ?', [$candidate]);
+                if ($taken === false) {
+                    $invoice = $candidate;
+                    break;
+                }
+            }
+            if ($invoice === null) {
+                $conn->rollBack();
+                return false;
+            }
+
+            $this->execute(
+                'INSERT INTO orders (customer_id, invoice_no, order_date, order_status)
+                 VALUES (?, ?, CURDATE(), ?)',
+                [$customerId, $invoice, 'paid']
+            );
+            $orderId = (int) $conn->lastInsertId();
+
+            foreach ($items as $item) {
+                $this->execute(
+                    'INSERT INTO orderdetails (order_id, product_id, qty) VALUES (?, ?, ?)',
+                    [$orderId, $item['p_id'], $item['qty']]
+                );
+            }
+
+            $this->execute(
+                'INSERT INTO payment (amt, customer_id, order_id, currency, reference, payment_date)
+                 VALUES (?, ?, ?, ?, ?, CURDATE())',
+                [$amount, $customerId, $orderId, PAYSTACK_CURRENCY, $reference]
+            );
+
+            $this->execute('DELETE FROM cart WHERE ip_add = ?', [$ip]);
+
+            $conn->commit();
+            return $orderId;
+        } catch (Exception $e) {
+            $conn->rollBack();
+            log_error('processPayment failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Has this Paystack reference already been recorded? Verifying a
+     * reference twice would otherwise create a second order for one payment,
+     * which is what happens if the customer refreshes the callback URL.
+     * @return array|false the existing payment row, or false
+     */
+    public function getPaymentByReference($reference)
+    {
+        return $this->fetchOne('SELECT * FROM payment WHERE reference = ?', [$reference]);
+    }
+
+    /**
+     * One order header, with the customer's details for the invoice.
+     * @return array|false
+     */
+    public function getOrderById($orderId)
+    {
+        return $this->fetchOne(
+            'SELECT o.*, p.amt, p.currency, p.reference, p.payment_date,
+                    c.customer_name, c.customer_email, c.customer_city, c.customer_country
+               FROM orders o
+               JOIN customer c ON c.customer_id = o.customer_id
+          LEFT JOIN payment  p ON p.order_id    = o.order_id
+              WHERE o.order_id = ?',
+            [$orderId]
+        );
+    }
+
+    /**
+     * The line items of one order, with product names and the price each.
+     * @return array list of rows (empty array if none)
+     */
+    public function getOrderItems($orderId)
+    {
+        return $this->fetchAll(
+            'SELECT d.product_id, d.qty, p.product_title, p.product_price, p.product_image
+               FROM orderdetails d
+               JOIN products p ON p.product_id = d.product_id
+              WHERE d.order_id = ?',
+            [$orderId]
+        );
+    }
 }

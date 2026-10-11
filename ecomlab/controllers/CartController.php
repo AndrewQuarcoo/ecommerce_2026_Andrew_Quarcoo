@@ -86,4 +86,26 @@ class CartController
     {
         return $this->cart->clearCart($ip);
     }
+
+    // ── Orders & payment (Task 13) ───────────────────────────
+
+    public function processPayment($customerId, $ip, $reference, $amount)
+    {
+        return $this->cart->processPayment($customerId, $ip, $reference, $amount);
+    }
+
+    public function getPaymentByReference($reference)
+    {
+        return $this->cart->getPaymentByReference($reference);
+    }
+
+    public function getOrderById($orderId)
+    {
+        return $this->cart->getOrderById($orderId);
+    }
+
+    public function getOrderItems($orderId)
+    {
+        return $this->cart->getOrderItems($orderId);
+    }
 }

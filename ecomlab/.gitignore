@@ -5,6 +5,11 @@
 # Copy core/db_cred.example.php to core/db_cred.php and fill in your own values.
 core/db_cred.php
 
+# Paystack API keys (Task 13). The secret key can charge and refund money and
+# this repository is public, so only the .example file is committed.
+# Copy core/paystack_cred.example.php to core/paystack_cred.php.
+core/paystack_cred.php
+
 # Local uploaded files (keep the folders, not their contents)
 images/products/*
 images/customers/*

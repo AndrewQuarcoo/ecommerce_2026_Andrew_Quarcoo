@@ -39,12 +39,33 @@ if (!headers_sent()) {
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: same-origin');
-    header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; "
-         . "style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; "
+
+    // The payment page (Task 13) must load Paystack's script and open its
+    // checkout in an iframe, which the default policy forbids. That page
+    // defines CSP_PAYSTACK *before* requiring this file, so the exception is
+    // granted to exactly one page instead of weakening the whole site.
+    $scriptSrc = "'self'";
+    $frameSrc  = "'none'";
+    $connect   = "'self'";
+    if (defined('CSP_PAYSTACK') && CSP_PAYSTACK) {
+        $scriptSrc .= ' https://js.paystack.co';
+        $frameSrc   = 'https://checkout.paystack.com';
+        $connect   .= ' https://api.paystack.co https://checkout.paystack.com';
+    }
+
+    header("Content-Security-Policy: default-src 'self'; img-src 'self' data: https:; "
+         . "style-src 'self' 'unsafe-inline'; script-src $scriptSrc; "
+         . "connect-src $connect; frame-src $frameSrc; form-action 'self'; "
          . "base-uri 'self'; frame-ancestors 'none'");
 }
 
 require_once __DIR__ . '/db_class.php';
+
+// Paystack keys (Task 13). Loaded if present — the rest of the site works
+// without them, so a fresh clone is not broken before the file is created.
+if (is_file(__DIR__ . '/paystack_cred.php')) {
+    require_once __DIR__ . '/paystack_cred.php';
+}
 
 /**
  * Append a timestamped line to error/error.log (the project's own logger).
