@@ -36,19 +36,26 @@ $image = basename(trim($_POST['current_image'] ?? ''));
 if ($image === '' || $image === '.' || $image === '..') {
     $image = null;
 }
-if (!empty($_FILES['product_image']['name'])) {
-    $upload = save_uploaded_image($_FILES['product_image'],
-                                  __DIR__ . '/../images/products', 'prod_');
-    if (!$upload['ok']) {
-        $errors[] = $upload['error'];
-    } else {
-        $image = $upload['filename'];
-    }
+
+// A new file is checked now and stored only once everything else passes.
+$upload = validate_uploaded_image($_FILES['product_image'] ?? null);
+if ($upload['present'] && !$upload['ok']) {
+    $errors[] = $upload['error'];
 }
 
 if ($errors) {
     $_SESSION['error'] = implode(' ', $errors);
     redirect($back . '?edit_id=' . $id);
+}
+
+if ($upload['present']) {
+    $stored = store_uploaded_image($_FILES['product_image'],
+                                   __DIR__ . '/../images/products', 'prod_', $upload['mime']);
+    if ($stored === null) {
+        $_SESSION['error'] = 'Could not save the product image.';
+        redirect($back . '?edit_id=' . $id);
+    }
+    $image = $stored;
 }
 
 $result = (new ProductController())->updateProduct(

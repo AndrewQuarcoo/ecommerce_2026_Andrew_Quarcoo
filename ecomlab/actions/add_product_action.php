@@ -26,21 +26,25 @@ $errors = $in['errors'];
 
 // The image is required when creating a product (there is nothing to fall
 // back on), but optional when editing — see update_product_action.php.
-$image  = null;
-if (empty($_FILES['product_image']['name'])) {
+// Checked now, stored only after every field has passed, so a submission
+// rejected for a bad price does not leave a stray file in images/products.
+$upload = validate_uploaded_image($_FILES['product_image'] ?? null);
+if (!$upload['present']) {
     $errors[] = 'A product image is required.';
-} else {
-    $upload = save_uploaded_image($_FILES['product_image'],
-                                  __DIR__ . '/../images/products', 'prod_');
-    if (!$upload['ok']) {
-        $errors[] = $upload['error'];
-    } else {
-        $image = $upload['filename'];
-    }
+} elseif (!$upload['ok']) {
+    $errors[] = $upload['error'];
 }
 
 if ($errors) {
     $_SESSION['error'] = implode(' ', $errors);
+    $_SESSION['old']   = $in['old'];
+    redirect($back);
+}
+
+$image = store_uploaded_image($_FILES['product_image'],
+                              __DIR__ . '/../images/products', 'prod_', $upload['mime']);
+if ($image === null) {
+    $_SESSION['error'] = 'Could not save the product image.';
     $_SESSION['old']   = $in['old'];
     redirect($back);
 }

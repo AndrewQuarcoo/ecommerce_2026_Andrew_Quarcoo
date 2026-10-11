@@ -144,37 +144,44 @@ const UPLOAD_IMAGE_TYPES = [
 const UPLOAD_IMAGE_MAX = 2097152; // 2 MB
 
 /**
- * Validate and store one uploaded image. Used by registration (customer
- * photo) and by the admin product form, so the rules live in exactly one
- * place rather than being copy-pasted per action.
+ * Check one uploaded image WITHOUT storing it.
+ *
+ * Validation is separate from storage on purpose. If the file were moved
+ * into place first and some *other* field then failed validation, the
+ * rejected submission would still have left an orphan image on disk — which
+ * is exactly what happened before this split: a product rejected for a bad
+ * price had already written its picture to images/products/.
  *
  * Two deliberate choices:
  *   • The type is read with finfo from the file's own bytes, NOT from
- *     $_FILES[...]['type'], which is supplied by the browser and can simply
- *     be lied about.
- *   • The saved extension comes from that detected type, never from the
- *     user's filename, so "evil.php" cannot be smuggled through by renaming
- *     a real image.
+ *     $_FILES[...]['type'], which the browser supplies and can simply lie
+ *     about.
+ *   • The caller saves under an extension derived from that detected type,
+ *     never from the user's filename, so "evil.php" cannot be smuggled
+ *     through by renaming a real image.
  *
- * @param  array  $file    one entry from $_FILES
- * @param  string $destDir absolute directory to save into
- * @param  string $prefix  filename prefix, e.g. 'prod_'
- * @return array ['ok' => bool, 'filename' => string|null, 'error' => string|null]
+ * @param  array|null $file one entry from $_FILES
+ * @return array ['ok' => bool, 'present' => bool, 'mime' => string|null, 'error' => string|null]
  */
-function save_uploaded_image($file, $destDir, $prefix)
+function validate_uploaded_image($file)
 {
+    $none = ['ok' => true, 'present' => false, 'mime' => null, 'error' => null];
+    $fail = function ($msg) {
+        return ['ok' => false, 'present' => true, 'mime' => null, 'error' => $msg];
+    };
+
     if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-        return ['ok' => true, 'filename' => null, 'error' => null]; // nothing sent
+        return $none;
     }
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        return ['ok' => false, 'filename' => null, 'error' => 'Image upload failed. Please try another file.'];
+        return $fail('Image upload failed. Please try another file.');
     }
     // Guards against a forged $_FILES entry pointing at an arbitrary path.
     if (!is_uploaded_file($file['tmp_name'])) {
-        return ['ok' => false, 'filename' => null, 'error' => 'Invalid upload.'];
+        return $fail('Invalid upload.');
     }
     if ($file['size'] > UPLOAD_IMAGE_MAX) {
-        return ['ok' => false, 'filename' => null, 'error' => 'Image must be 2 MB or smaller.'];
+        return $fail('Image must be 2 MB or smaller.');
     }
 
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -182,15 +189,25 @@ function save_uploaded_image($file, $destDir, $prefix)
     finfo_close($finfo);
 
     if (!isset(UPLOAD_IMAGE_TYPES[$mime])) {
-        return ['ok' => false, 'filename' => null, 'error' => 'Image must be JPG, PNG, GIF or WEBP.'];
+        return $fail('Image must be JPG, PNG, GIF or WEBP.');
     }
+    return ['ok' => true, 'present' => true, 'mime' => $mime, 'error' => null];
+}
 
+/**
+ * Move an already-validated upload into place. Call only once every other
+ * field has passed, so a rejected submission never leaves a file behind.
+ *
+ * @return string|null the stored filename, or null if the move failed
+ */
+function store_uploaded_image($file, $destDir, $prefix, $mime)
+{
     $filename = uniqid($prefix, true) . '.' . UPLOAD_IMAGE_TYPES[$mime];
     if (!move_uploaded_file($file['tmp_name'], rtrim($destDir, '/') . '/' . $filename)) {
         log_error('Could not move uploaded image to ' . $destDir);
-        return ['ok' => false, 'filename' => null, 'error' => 'Could not save the image.'];
+        return null;
     }
-    return ['ok' => true, 'filename' => $filename, 'error' => null];
+    return $filename;
 }
 
 // ── CSRF protection ──────────────────────────────────────────

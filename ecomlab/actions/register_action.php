@@ -86,15 +86,13 @@ if (mb_strlen($address) > 255) {
 }
 
 // ── Optional profile image upload ──
-// Validation and storage live in save_uploaded_image() (core/core.php) so the
-// registration form and the admin product form enforce identical rules.
-$imageName = null;
-$upload = save_uploaded_image($_FILES['customer_image'] ?? null,
-                              __DIR__ . '/../images/customers', 'cust_');
+// Only CHECKED here; it is stored further down, once every other field has
+// passed. Storing first would leave an orphan file whenever some other field
+// is rejected. The rules live in core/core.php so this form and the admin
+// product form enforce exactly the same ones.
+$upload = validate_uploaded_image($_FILES['customer_image'] ?? null);
 if (!$upload['ok']) {
     $errors[] = $upload['error'];
-} else {
-    $imageName = $upload['filename'];
 }
 
 // Preserve entered values (except password) so the form can be re-filled.
@@ -110,6 +108,17 @@ $_SESSION['old'] = [
 if ($errors) {
     $_SESSION['error'] = implode(' ', $errors);
     redirect(app_url('views/register.php'));
+}
+
+// Everything validated — now it is safe to put the image on disk.
+$imageName = null;
+if ($upload['present']) {
+    $imageName = store_uploaded_image($_FILES['customer_image'],
+                                      __DIR__ . '/../images/customers', 'cust_', $upload['mime']);
+    if ($imageName === null) {
+        $_SESSION['error'] = 'Could not save the profile image.';
+        redirect(app_url('views/register.php'));
+    }
 }
 
 // ── Hand off to the controller ──
