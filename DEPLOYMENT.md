@@ -65,7 +65,7 @@ htdocs (`/ecomlab`) and under `mod_userdir` (`/~andrew.quarcoo/shoppn`).
 | 10 | Product grid, filters, detail page, search | ✅ tested live |
 | 11 | Add to cart + header summary | ✅ tested live |
 | 12 | Remove items, update quantities | ✅ tested live |
-| 13 | Paystack payment, order, invoice | ⚠️ see *Paystack keys* below |
+| 13 | Paystack payment, order, invoice | ✅ tested live (test mode) |
 
 Verified end-to-end against the live server, 62 checks for tasks 9–10 and
 71 for tasks 11–13: brand/category/product add and edit, A→Z ordering,
