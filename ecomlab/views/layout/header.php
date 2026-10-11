@@ -11,6 +11,14 @@
 if (!function_exists('is_logged_in')) {
     require_once __DIR__ . '/../../core/core.php';
 }
+
+// Task 11 — the cart summary shown on every page. A View asking a Controller
+// for display data; no SQL here.
+require_once __DIR__ . '/../../controllers/CartController.php';
+$headerCart  = new CartController();
+$headerIp    = get_ip();
+$cartCount   = $headerCart->getCartCount($headerIp);
+$cartTotal   = $headerCart->getCartTotal($headerIp);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,6 +58,13 @@ if (!function_exists('is_logged_in')) {
                 <a class="nav-cta" href="<?php echo app_url('views/login.php'); ?>">Login</a>
             <?php endif; ?>
         </nav>
+    </div>
+
+    <div class="cart-bar">
+        <span class="cart-bar-label">Shopping Cart</span>
+        &mdash; Total Items: <strong><?php echo (int) $cartCount; ?></strong>
+        | Total Price: <strong><?php echo money($cartTotal); ?></strong>
+        | <a href="<?php echo app_url('views/cart.php'); ?>">Go to Cart</a>
     </div>
 </header>
 

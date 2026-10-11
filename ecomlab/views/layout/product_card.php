@@ -31,7 +31,6 @@
 
     <p class="product-actions">
         <a class="btn-sm" href="<?php echo app_url('views/single_product.php?pro_id=' . (int) $product['product_id']); ?>">Details</a>
-        <?php /* Task 11 turns this into a working Add to Cart link. */ ?>
-        <a class="btn-sm" href="<?php echo app_url('index.php?add_cart=' . (int) $product['product_id']); ?>">Add to Cart</a>
+        <a class="btn-sm" href="<?php echo app_url('actions/add_to_cart_action.php?add_cart=' . (int) $product['product_id']); ?>">Add to Cart</a>
     </p>
 </article>

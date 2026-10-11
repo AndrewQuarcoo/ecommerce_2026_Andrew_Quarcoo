@@ -66,7 +66,7 @@ require_once __DIR__ . '/layout/header.php';
                 <?php endif; ?>
 
                 <p class="product-actions">
-                    <a class="btn" href="<?php echo app_url('index.php?add_cart=' . (int) $product['product_id']); ?>">Add to Cart</a>
+                    <a class="btn" href="<?php echo app_url('actions/add_to_cart_action.php?add_cart=' . (int) $product['product_id']); ?>">Add to Cart</a>
                 </p>
             </div>
         </div>
