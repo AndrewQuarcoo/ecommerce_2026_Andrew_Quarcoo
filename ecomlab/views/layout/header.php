@@ -38,6 +38,7 @@ if (!function_exists('is_logged_in')) {
             <?php if (is_admin()): ?>
                 <a href="<?php echo app_url('views/admin/brand.php'); ?>">Brands</a>
                 <a href="<?php echo app_url('views/admin/category.php'); ?>">Categories</a>
+                <a href="<?php echo app_url('views/admin/product.php'); ?>">Products</a>
             <?php endif; ?>
 
             <?php if (is_logged_in()): ?>

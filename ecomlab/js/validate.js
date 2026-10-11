@@ -105,6 +105,71 @@ function passMessage(pass) {
     return 'Password needs at least ' + missing.join(', ') + '.';
 }
 
+// ── Admin product form (Task 9) ──
+// Client-side checks mirror actions/product_input.php and the PHP upload
+// rules. They are a convenience only — the server validates everything
+// again, because JS can be bypassed and a file input can be scripted.
+const productForm = document.getElementById('product-form');
+if (productForm) {
+    const priceRegex = /^\d{1,8}(\.\d{1,2})?$/;   // DECIMAL(10,2), not negative
+
+    const pv = {
+        title: (val) => val.trim().length >= 2 && val.trim().length <= 200,
+        cat:   (val) => val !== '',
+        brand: (val) => val !== '',
+        price: (val) => priceRegex.test(val.trim()),
+        desc:  (val) => val.length <= 500,
+        keys:  (val) => val.length <= 100,
+    };
+    liveClear('product_title',    'error-product-title',    pv.title);
+    liveClear('product_cat',      'error-product-cat',      pv.cat);
+    liveClear('product_brand',    'error-product-brand',    pv.brand);
+    liveClear('product_price',    'error-product-price',    pv.price);
+    liveClear('product_desc',     'error-product-desc',     pv.desc);
+    liveClear('product_keywords', 'error-product-keywords', pv.keys);
+
+    productForm.addEventListener('submit', function (e) {
+        let ok = true;
+        const val = (id) => (document.getElementById(id) || {}).value || '';
+
+        ok &= setError('product_title', 'error-product-title',
+            pv.title(val('product_title')) ? '' : 'Title is required (2–200 characters).');
+        ok &= setError('product_cat', 'error-product-cat',
+            pv.cat(val('product_cat')) ? '' : 'Please choose a category.');
+        ok &= setError('product_brand', 'error-product-brand',
+            pv.brand(val('product_brand')) ? '' : 'Please choose a brand.');
+        ok &= setError('product_price', 'error-product-price',
+            pv.price(val('product_price')) ? '' : 'Enter a price like 249.99 (no negatives).');
+        ok &= setError('product_desc', 'error-product-desc',
+            pv.desc(val('product_desc')) ? '' : 'Description must be 500 characters or fewer.');
+        ok &= setError('product_keywords', 'error-product-keywords',
+            pv.keys(val('product_keywords')) ? '' : 'Keywords must be 100 characters or fewer.');
+
+        // The image is required when adding (the input carries `required`),
+        // optional when editing. Validate type and size whenever one is chosen.
+        const imgInput = document.getElementById('product_image');
+        if (imgInput) {
+            let imgMsg = '';
+            if (imgInput.files.length > 0) {
+                const f = imgInput.files[0];
+                if (!IMG_TYPES.includes(f.type)) imgMsg = 'Image must be JPG, PNG, GIF or WEBP.';
+                else if (f.size > IMG_MAX)       imgMsg = 'Image must be 2 MB or smaller.';
+            } else if (imgInput.hasAttribute('required')) {
+                imgMsg = 'A product image is required.';
+            }
+            ok &= setError('product_image', 'error-product-image', imgMsg);
+        }
+
+        if (!ok) {
+            e.preventDefault();
+            const firstError = productForm.querySelector('.input-invalid');
+            if (firstError) firstError.focus();
+        } else {
+            showLoading('product-submit', 'Saving…');
+        }
+    });
+}
+
 // ── Login form ──
 const loginForm = document.getElementById('login-form');
 if (loginForm) {

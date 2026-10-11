@@ -86,39 +86,15 @@ if (mb_strlen($address) > 255) {
 }
 
 // ── Optional profile image upload ──
+// Validation and storage live in save_uploaded_image() (core/core.php) so the
+// registration form and the admin product form enforce identical rules.
 $imageName = null;
-if (!empty($_FILES['customer_image']['name']) && $_FILES['customer_image']['error'] !== UPLOAD_ERR_NO_FILE) {
-    $file = $_FILES['customer_image'];
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        $errors[] = 'Image upload failed. Please try a different file.';
-    } else {
-        // Map allowed MIME types to a safe, server-chosen extension. The
-        // extension is NEVER taken from the user-supplied filename — that
-        // prevents saving an executable name (e.g. "evil.php") that a real
-        // image could otherwise smuggle past the MIME check.
-        $allowed = [
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/gif'  => 'gif',
-            'image/webp' => 'webp',
-        ];
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
-
-        if (!isset($allowed[$mime])) {
-            $errors[] = 'Profile image must be JPG, PNG, GIF or WEBP.';
-        } elseif ($file['size'] > 2 * 1024 * 1024) {
-            $errors[] = 'Profile image must be 2 MB or smaller.';
-        } else {
-            $imageName = uniqid('cust_', true) . '.' . $allowed[$mime];
-            $dest      = __DIR__ . '/../images/customers/' . $imageName;
-            if (!move_uploaded_file($file['tmp_name'], $dest)) {
-                $errors[] = 'Could not save the profile image.';
-                $imageName = null;
-            }
-        }
-    }
+$upload = save_uploaded_image($_FILES['customer_image'] ?? null,
+                              __DIR__ . '/../images/customers', 'cust_');
+if (!$upload['ok']) {
+    $errors[] = $upload['error'];
+} else {
+    $imageName = $upload['filename'];
 }
 
 // Preserve entered values (except password) so the form can be re-filled.

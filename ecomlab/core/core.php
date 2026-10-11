@@ -103,6 +103,93 @@ function is_safe_local_url($url)
         && strpos($url, "\n") === false;
 }
 
+// ── Display helpers ────────────────────────
+/**
+ * Format a price for display. The shop prices in Ghana cedis, matching the
+ * currency the payment step charges in (Task 13).
+ */
+function money($amount)
+{
+    return 'GH\u{20B5} ' . number_format((float) $amount, 2);
+}
+
+/**
+ * URL for a product image, falling back to a shared placeholder when the
+ * row has no image. Views call this instead of building the path themselves.
+ *
+ * The placeholder lives in images/ rather than images/products/ because that
+ * folder holds uploads and is git-ignored — a shipped asset belongs in git.
+ */
+function product_image_url($filename)
+{
+    $filename = trim((string) $filename);
+    if ($filename === '') {
+        return app_url('images/placeholder.svg');
+    }
+    // Only ever a bare filename — strip any path a bad row might carry.
+    return app_url('images/products/' . rawurlencode(basename($filename)));
+}
+
+// ── Image uploads ────────────────────────────
+/** Image MIME types we accept, mapped to the extension we will save as. */
+const UPLOAD_IMAGE_TYPES = [
+    'image/jpeg' => 'jpg',
+    'image/png'  => 'png',
+    'image/gif'  => 'gif',
+    'image/webp' => 'webp',
+];
+const UPLOAD_IMAGE_MAX = 2097152; // 2 MB
+
+/**
+ * Validate and store one uploaded image. Used by registration (customer
+ * photo) and by the admin product form, so the rules live in exactly one
+ * place rather than being copy-pasted per action.
+ *
+ * Two deliberate choices:
+ *   • The type is read with finfo from the file's own bytes, NOT from
+ *     $_FILES[...]['type'], which is supplied by the browser and can simply
+ *     be lied about.
+ *   • The saved extension comes from that detected type, never from the
+ *     user's filename, so "evil.php" cannot be smuggled through by renaming
+ *     a real image.
+ *
+ * @param  array  $file    one entry from $_FILES
+ * @param  string $destDir absolute directory to save into
+ * @param  string $prefix  filename prefix, e.g. 'prod_'
+ * @return array ['ok' => bool, 'filename' => string|null, 'error' => string|null]
+ */
+function save_uploaded_image($file, $destDir, $prefix)
+{
+    if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => true, 'filename' => null, 'error' => null]; // nothing sent
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'filename' => null, 'error' => 'Image upload failed. Please try another file.'];
+    }
+    // Guards against a forged $_FILES entry pointing at an arbitrary path.
+    if (!is_uploaded_file($file['tmp_name'])) {
+        return ['ok' => false, 'filename' => null, 'error' => 'Invalid upload.'];
+    }
+    if ($file['size'] > UPLOAD_IMAGE_MAX) {
+        return ['ok' => false, 'filename' => null, 'error' => 'Image must be 2 MB or smaller.'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime  = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!isset(UPLOAD_IMAGE_TYPES[$mime])) {
+        return ['ok' => false, 'filename' => null, 'error' => 'Image must be JPG, PNG, GIF or WEBP.'];
+    }
+
+    $filename = uniqid($prefix, true) . '.' . UPLOAD_IMAGE_TYPES[$mime];
+    if (!move_uploaded_file($file['tmp_name'], rtrim($destDir, '/') . '/' . $filename)) {
+        log_error('Could not move uploaded image to ' . $destDir);
+        return ['ok' => false, 'filename' => null, 'error' => 'Could not save the image.'];
+    }
+    return ['ok' => true, 'filename' => $filename, 'error' => null];
+}
+
 // ── CSRF protection ──────────────────────────────────────────
 /** Current session CSRF token, created on first use. */
 function csrf_token()

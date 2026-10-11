@@ -94,4 +94,70 @@ class ProductController
             ? ['success' => true]
             : ['success' => false, 'error' => 'Could not update category.'];
     }
+
+    // ── Products (Tasks 9 & 10) ─────────────────────
+
+    public function getProductById($id)
+    {
+        return $this->product->getProductById($id);
+    }
+
+    public function getAllProducts()
+    {
+        return $this->product->getAllProducts();
+    }
+
+    public function getFeaturedProducts($limit = 6)
+    {
+        return $this->product->getFeaturedProducts($limit);
+    }
+
+    public function getProductsByCategory($catId)
+    {
+        return $this->product->getProductsByCategory($catId);
+    }
+
+    public function getProductsByBrand($brandId)
+    {
+        return $this->product->getProductsByBrand($brandId);
+    }
+
+    public function searchProducts($query)
+    {
+        return $this->product->searchProducts($query);
+    }
+
+    /**
+     * Task 9 — create a product. The Action has already moved the uploaded
+     * file and passes only its filename; the Controller checks that the
+     * foreign keys actually exist, because the DB would otherwise reject the
+     * INSERT with a raw constraint error the user cannot act on.
+     */
+    public function addProduct($cat, $brand, $title, $price, $desc, $image, $keywords)
+    {
+        if (!$this->product->getCategoryById($cat)) {
+            return ['success' => false, 'error' => 'Please choose a valid category.'];
+        }
+        if (!$this->product->getBrandById($brand)) {
+            return ['success' => false, 'error' => 'Please choose a valid brand.'];
+        }
+        $ok = $this->product->addProduct($cat, $brand, $title, $price, $desc, $image, $keywords);
+        return $ok ? ['success' => true] : ['success' => false, 'error' => 'Could not add product.'];
+    }
+
+    /** Task 9 — update a product, with the same foreign-key checks. */
+    public function updateProduct($id, $cat, $brand, $title, $price, $desc, $image, $keywords)
+    {
+        if (!$this->product->getProductById($id)) {
+            return ['success' => false, 'error' => 'Product not found.'];
+        }
+        if (!$this->product->getCategoryById($cat)) {
+            return ['success' => false, 'error' => 'Please choose a valid category.'];
+        }
+        if (!$this->product->getBrandById($brand)) {
+            return ['success' => false, 'error' => 'Please choose a valid brand.'];
+        }
+        $ok = $this->product->updateProduct($id, $cat, $brand, $title, $price, $desc, $image, $keywords);
+        return $ok ? ['success' => true] : ['success' => false, 'error' => 'Could not update product.'];
+    }
 }
