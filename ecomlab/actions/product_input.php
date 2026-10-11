@@ -8,7 +8,16 @@
  *
  * This is Action-layer code: reading $_POST is an Action's job. It performs
  * no SQL and prints nothing.
+ *
+ * It is an include, not an endpoint. actions/ has to stay web-reachable
+ * because the forms POST into it, so this file refuses to run when it is
+ * requested directly rather than included.
  */
+
+if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === basename(__FILE__)) {
+    http_response_code(404);
+    exit;
+}
 
 /**
  * Read, sanitise and validate the product form fields (everything except the

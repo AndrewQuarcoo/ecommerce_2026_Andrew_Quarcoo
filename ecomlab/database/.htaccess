@@ -1,0 +1,10 @@
+# database/ is never requested directly over HTTP — it is only read from disk by
+# PHP (or, for error/, written to). Apache authorisation does not affect
+# filesystem includes, so denying here costs the app nothing.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
