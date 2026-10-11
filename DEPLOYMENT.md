@@ -39,8 +39,12 @@ htdocs (`/ecomlab`) and under `mod_userdir` (`/~andrew.quarcoo/shoppn`).
 | What | Value |
 |------|-------|
 | Repo | <https://github.com/AndrewQuarcoo/ecommerce_2026_Andrew_Quarcoo> |
-| Tasks 1–4 branch | `feature/tasks-1-4-auth` |
-| Tasks 5–8 branch (**deployed**) | `feature/tasks-5-8-brands-categories` |
+| Tasks 1–4 | `feature/tasks-1-4-auth` |
+| Tasks 5–8 | `feature/tasks-5-8-brands-categories` |
+| Tasks 9–10 | `feature/tasks-9-10-products` |
+| Tasks 11–12 | `feature/tasks-11-12-cart` |
+| Task 13 (**deployed**) | `feature/task-13-payment` |
+| Craigslist restyle | `feature/craigslist-ui` |
 | App folder | `ecomlab/` |
 
 ---
@@ -57,12 +61,51 @@ htdocs (`/ecomlab`) and under `mod_userdir` (`/~andrew.quarcoo/shoppn`).
 | 6 | Edit Brand (`?edit_id=N`) | ✅ tested live |
 | 7 | Add Category (admin) | ✅ tested live |
 | 8 | Edit Category (`?edit_id=N`) | ✅ tested live |
+| 9 | Product add/edit with image upload | ✅ tested live |
+| 10 | Product grid, filters, detail page, search | ✅ tested live |
+| 11 | Add to cart + header summary | ✅ tested live |
+| 12 | Remove items, update quantities | ✅ tested live |
+| 13 | Paystack payment, order, invoice | ⚠️ see *Paystack keys* below |
 
-Verified end-to-end against the live server: brand/category add and edit,
-A→Z ordering, duplicate-name rejection (case-insensitive), empty-name
-rejection, tampered and unknown ids rejected, CSRF rejection, HTML escaping
-on output, admin nav links hidden from non-admins, and `require_admin()`
-blocking guests and customers on both the pages and the action endpoints.
+Verified end-to-end against the live server, 62 checks for tasks 9–10 and
+71 for tasks 11–13: brand/category/product add and edit, A→Z ordering,
+duplicate and empty-name rejection, tampered/unknown/negative ids, CSRF
+rejection, HTML escaping, image uploads (including a PHP file renamed
+`.png`, which is refused), category/brand filters, product detail, search
+(including a bare `%`, which must not match everything), cart add/remove/
+update with invalid quantities refused, the guest-cart-carries-over-login
+behaviour, and forged payment references — none of which create an order.
+
+`require_admin()` blocks guests and customers on both the admin pages and
+every admin action endpoint.
+
+### Paystack keys
+
+`views/payment.php` reports that keys are not set until
+`core/paystack_cred.php` exists with real values. That file is **git-ignored**,
+like `db_cred.php`: a Paystack secret key can charge and refund money and
+this repository is public. To switch the live payment flow on:
+
+```bash
+cd ~/public_html/shoppn/core
+cp paystack_cred.example.php paystack_cred.php   # already done by the deploy
+# then edit paystack_cred.php and paste your pk_test_ / sk_test_ keys
+```
+
+No code change is needed. Test card: 4084 0840 8408 4081, any future
+expiry, CVV 408.
+
+Everything *around* the payment is already verified live: the page renders
+the cart, the public key reaches the browser while the secret key never
+does, the CSP exception is granted only to that page, and a forged
+`?ref=` is refused and leaves the cart untouched.
+
+### Staging copy
+
+`~/public_html/shoppn-dev/` runs the `feature/craigslist-ui` branch against
+the same database — useful for previewing the restyle without touching the
+graded site:
+<http://169.239.251.102:442/~andrew.quarcoo/shoppn-dev/index.php>
 
 ### Getting an admin account
 
@@ -112,10 +155,10 @@ The role is read into the session at login, so log out and back in for the
    `find ~/public_html/shoppn -name '._*' -delete`
 4. **Permissions** — `images/products`, `images/customers` → `777`;
    `error/error.log` → `666`.
-   `core/db_cred.php` must stay **readable by Apache** (`644`). Setting it to
-   `700` makes every PHP page return **500**, because the web server can no
-   longer `require` it. `core/.htaccess` is what keeps it off the web, not the
-   file mode.
+   `core/db_cred.php` and `core/paystack_cred.php` must stay **readable by
+   Apache** (`644`). Setting one to `700` makes every PHP page return **500**,
+   because the web server can no longer `require` it. `core/.htaccess` is what
+   keeps them off the web, not the file mode.
 5. Smoke-test the live home page, then log in as admin and add a brand.
 
 ---
