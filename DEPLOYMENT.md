@@ -186,5 +186,16 @@ The role is read into the session at login, so log out and back in for the
   is derived from the detected MIME, never from the user's filename.
 - **Authorization** — every admin page and admin action calls `require_admin()`
   **before any output**, so a non-admin never sees partial admin HTML.
+- **Uploads cannot execute** — `images/.htaccess` turns the PHP interpreter
+  off, unhooks the script handlers and denies the request outright. A live
+  audit showed a `.php` file in `images/products/` *did* run; the upload code
+  already made that unreachable (the extension comes from the MIME finfo reads
+  out of the file's bytes, never from the user's filename), but that left one
+  function as the only thing between an upload form and remote code execution
+  in a `777` directory.
 - **Server config** — `Options -Indexes` stops directory listings, and
-  `core/.htaccess` denies HTTP access to the bootstrap/credentials folder.
+  `core/`, `error/`, `database/`, `classes/` and `controllers/` each deny HTTP
+  access. Apache authorisation does not affect filesystem includes, so the app
+  is unaffected. `actions/` stays reachable (forms POST into it), so the
+  include-only `actions/product_input.php` refuses to run if requested
+  directly.
