@@ -99,6 +99,11 @@ class CartController
         return $this->cart->getPaymentByReference($reference);
     }
 
+    public function getOrdersByCustomer($customerId)
+    {
+        return $this->cart->getOrdersByCustomer($customerId);
+    }
+
     public function getOrderById($orderId)
     {
         return $this->cart->getOrderById($orderId);

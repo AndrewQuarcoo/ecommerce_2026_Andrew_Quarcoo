@@ -215,6 +215,37 @@ class Cart extends Database
     }
 
     /**
+     * Every order this customer has placed, newest first, with its value and
+     * item count — the data behind the order history page.
+     *
+     * The payment columns are wrapped in MAX() rather than selected raw.
+     * payment.order_id is indexed but not UNIQUE, so under ONLY_FULL_GROUP_BY
+     * MySQL cannot prove there is just one payment row per order and would
+     * reject the query. MAX() over a single row is that row.
+     *
+     * @return array list of rows (empty array if the customer has none)
+     */
+    public function getOrdersByCustomer($customerId)
+    {
+        return $this->fetchAll(
+            'SELECT o.order_id, o.invoice_no, o.order_date, o.order_status,
+                    MAX(p.amt)       AS amt,
+                    MAX(p.currency)  AS currency,
+                    MAX(p.reference) AS reference,
+                    COUNT(d.product_id)                      AS item_count,
+                    COALESCE(SUM(d.qty * pr.product_price),0) AS total
+               FROM orders o
+          LEFT JOIN payment      p  ON p.order_id   = o.order_id
+          LEFT JOIN orderdetails d  ON d.order_id   = o.order_id
+          LEFT JOIN products     pr ON pr.product_id = d.product_id
+              WHERE o.customer_id = ?
+           GROUP BY o.order_id, o.invoice_no, o.order_date, o.order_status
+           ORDER BY o.order_id DESC',
+            [$customerId]
+        );
+    }
+
+    /**
      * One order header, with the customer's details for the invoice.
      * @return array|false
      */

@@ -73,6 +73,11 @@ require_once __DIR__ . '/layout/header.php';
 
             <p class="form-foot">
                 <a class="btn" href="<?php echo app_url('index.php'); ?>">Continue Shopping</a>
+                <a class="btn" href="<?php echo app_url('views/account/orders.php'); ?>">My Orders</a>
+            </p>
+            <p class="hint">
+                This receipt stays available under My Orders &mdash; you do not
+                need to save the page.
             </p>
         </div>
     </section>
