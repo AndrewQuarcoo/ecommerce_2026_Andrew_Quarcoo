@@ -15,11 +15,12 @@
 
 require_once __DIR__ . '/../core/core.php';
 require_login();
+require_once __DIR__ . '/../core/paystack.php';
 require_once __DIR__ . '/../controllers/CartController.php';
 
 $failed = app_url('views/payment_failed.php');
 
-if (!defined('PAYSTACK_SECRET_KEY') || strpos(PAYSTACK_SECRET_KEY, 'xxxx') !== false) {
+if (!paystack_configured()) {
     log_error('Paystack keys are not configured (core/paystack_cred.php).');
     $_SESSION['error'] = 'Payments are not configured on this server yet.';
     redirect($failed);
@@ -53,46 +54,32 @@ if ($expected <= 0) {
 }
 
 // ── Server-to-server verification ──
-$ch = curl_init('https://api.paystack.co/transaction/verify/' . rawurlencode($reference));
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . PAYSTACK_SECRET_KEY,
-                               'Cache-Control: no-cache'],
-    CURLOPT_TIMEOUT        => 30,
-    CURLOPT_SSL_VERIFYPEER => true,   // never disable: that is what makes this trustworthy
-    CURLOPT_SSL_VERIFYHOST => 2,
-]);
-$body   = curl_exec($ch);
-$curlNo = curl_errno($ch);
-$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+// The shared client in core/paystack.php, so the browser callback, the
+// webhook and the recovery sweep all verify in exactly the same way.
+$tx = paystack_verify($reference);
 
-if ($curlNo !== 0 || $status !== 200 || !$body) {
-    log_error("Paystack verify failed (curl=$curlNo http=$status) ref=$reference");
+if ($tx['error'] !== null) {
+    log_error('Paystack verify failed (' . $tx['error'] . ") ref=$reference");
     $_SESSION['error'] = 'We could not confirm your payment with Paystack. You have not been charged twice — please contact us before retrying.';
     redirect($failed);
 }
-
-$data = json_decode($body, true);
-if (!is_array($data) || empty($data['status']) || ($data['data']['status'] ?? '') !== 'success') {
+if (!$tx['paid']) {
     log_error('Paystack reported an unsuccessful transaction, ref=' . $reference);
     $_SESSION['error'] = 'Your payment was not successful.';
     redirect($failed);
 }
 
-// Amounts come back in the minor unit (pesewas), so compare in that unit and
-// avoid float equality entirely.
-$paidMinor     = (int) ($data['data']['amount'] ?? 0);
+// Amounts are compared in the minor unit (pesewas) as whole numbers, so no
+// float equality is involved.
 $expectedMinor = (int) round($expected * 100);
-$currency      = strtoupper($data['data']['currency'] ?? '');
 
-if ($currency !== PAYSTACK_CURRENCY) {
-    log_error("Currency mismatch: paid $currency, expected " . PAYSTACK_CURRENCY . ", ref=$reference");
+if ($tx['currency'] !== PAYSTACK_CURRENCY) {
+    log_error("Currency mismatch: paid {$tx['currency']}, expected " . PAYSTACK_CURRENCY . ", ref=$reference");
     $_SESSION['error'] = 'That payment was made in the wrong currency.';
     redirect($failed);
 }
-if ($paidMinor < $expectedMinor) {
-    log_error("Underpayment: paid $paidMinor, expected $expectedMinor, ref=$reference");
+if ($tx['amount'] < $expectedMinor) {
+    log_error("Underpayment: paid {$tx['amount']}, expected $expectedMinor, ref=$reference");
     $_SESSION['error'] = 'The amount paid does not match your cart total.';
     redirect($failed);
 }

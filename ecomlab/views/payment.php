@@ -19,6 +19,19 @@ require_once __DIR__ . '/../controllers/CartController.php';
 
 $controller = new CartController();
 $ip    = get_ip();
+
+// Before showing a Pay button, check with Paystack whether this customer has
+// already paid for exactly this cart and we simply never heard about it —
+// which is what happens if they closed the tab before the callback ran.
+// Without this they would be charged a second time for the same goods.
+$recovered = $controller->recoverUnrecordedPayment(
+    $_SESSION['customer_id'], $_SESSION['customer_email'], $ip
+);
+if ($recovered) {
+    $_SESSION['success'] = 'You had already paid for this order — here is your receipt.';
+    redirect(app_url('views/payment_success.php?order_id=' . $recovered));
+}
+
 $items = $controller->getCartItems($ip);
 $total = round($controller->getCartTotal($ip), 2);
 
@@ -76,7 +89,9 @@ require_once __DIR__ . '/layout/header.php';
                         data-email="<?php echo htmlspecialchars($_SESSION['customer_email']); ?>"
                         data-amount="<?php echo (int) round($total * 100); ?>"
                         data-currency="<?php echo htmlspecialchars(PAYSTACK_CURRENCY); ?>"
-                        data-callback="<?php echo htmlspecialchars(app_url('actions/process_payment_action.php')); ?>">
+                        data-callback="<?php echo htmlspecialchars(app_url('actions/process_payment_action.php')); ?>"
+                        data-customer="<?php echo (int) $_SESSION['customer_id']; ?>"
+                        data-ip="<?php echo htmlspecialchars($ip); ?>">
                     Pay with Paystack
                 </button>
                 <p class="hint">

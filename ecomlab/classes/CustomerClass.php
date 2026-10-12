@@ -62,6 +62,26 @@ class Customer extends Database
      * Verify credentials. Returns the customer row on success, false on failure.
      * @return array|false
      */
+    /**
+     * One customer by id. Used by the Paystack webhook to confirm that the
+     * customer id carried in a transaction's metadata really does belong to
+     * the email that paid — metadata originates in the browser, so it is a
+     * claim to be checked rather than a fact.
+     *
+     * The password hash is deliberately not selected: nothing outside
+     * login() has any business handling it.
+     *
+     * @return array|false
+     */
+    public function getCustomerById($id)
+    {
+        return $this->fetchOne(
+            'SELECT customer_id, customer_name, customer_email, user_role
+               FROM customer WHERE customer_id = ?',
+            [$id]
+        );
+    }
+
     public function login($email, $pass)
     {
         $row = $this->getCustomerByEmail($email);

@@ -146,6 +146,14 @@ class Cart extends Database
      */
     public function processPayment($customerId, $ip, $reference, $amount)
     {
+        // Fast path: already recorded, so hand back the existing order rather
+        // than making a second one. The UNIQUE index below is what makes this
+        // safe even when two requests race past this check together.
+        $existing = $this->getPaymentByReference($reference);
+        if ($existing) {
+            return (int) $existing['order_id'];
+        }
+
         $conn = $this->getConnection();
         $conn->beginTransaction();
 
@@ -196,6 +204,23 @@ class Cart extends Database
 
             $conn->commit();
             return $orderId;
+        } catch (PDOException $e) {
+            $conn->rollBack();
+
+            // 23000 is an integrity-constraint violation. On payment.reference
+            // that means another request recorded this very payment while we
+            // were working — the order exists, so return it instead of
+            // reporting a failure the customer cannot act on.
+            if ($e->getCode() === '23000') {
+                $existing = $this->getPaymentByReference($reference);
+                if ($existing) {
+                    log_error('processPayment: reference already recorded, reusing order '
+                              . $existing['order_id'] . ' (ref=' . $reference . ')');
+                    return (int) $existing['order_id'];
+                }
+            }
+            log_error('processPayment failed: ' . $e->getMessage());
+            return false;
         } catch (Exception $e) {
             $conn->rollBack();
             log_error('processPayment failed: ' . $e->getMessage());

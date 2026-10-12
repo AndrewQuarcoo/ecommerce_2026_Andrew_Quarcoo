@@ -34,6 +34,14 @@ if (payButton && window.PaystackPop) {
             email: email,
             amount: amount,
             currency: currency,
+            // Carried back to us on the webhook, which has no session and so
+            // no other way to know whose cart was paid for. The server treats
+            // these as a claim to verify, not as fact: it checks the customer
+            // id really does belong to the email Paystack recorded.
+            metadata: {
+                customer_id: parseInt(payButton.dataset.customer, 10),
+                ip_add: payButton.dataset.ip,
+            },
             onSuccess: function (response) {
                 // The server re-verifies this reference with Paystack before
                 // recording anything, so a forged call here achieves nothing.
