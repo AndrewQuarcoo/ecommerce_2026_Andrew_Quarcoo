@@ -37,6 +37,7 @@ require_once __DIR__ . '/../layout/header.php';
     <?php endif; ?>
 
     <p class="form-foot">
+        <a class="btn-sm" href="<?php echo app_url('views/account/orders.php'); ?>">My Orders</a>
         <a class="btn-sm" href="<?php echo app_url('logout.php'); ?>">Logout</a>
     </p>
 </div>

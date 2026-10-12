@@ -52,6 +52,7 @@ $cartTotal   = $headerCart->getCartTotal($headerIp);
             <?php if (is_logged_in()): ?>
                 <span class="nav-welcome">Welcome, <?php echo htmlspecialchars($_SESSION['customer_name'] ?? 'friend'); ?></span>
                 <a href="<?php echo app_url('views/account/my_account.php'); ?>">My Account</a>
+                <a href="<?php echo app_url('views/account/orders.php'); ?>">My Orders</a>
                 <a class="nav-cta" href="<?php echo app_url('logout.php'); ?>">Logout</a>
             <?php else: ?>
                 <a href="<?php echo app_url('views/register.php'); ?>">Register</a>
