@@ -157,6 +157,14 @@ CREATE TABLE `payment` (
   `reference`    varchar(100)  DEFAULT NULL,          -- Paystack transaction reference (Task 13)
   `payment_date` date          NOT NULL,
   PRIMARY KEY (`pay_id`),
+  -- One payment row per Paystack reference, enforced by the database rather
+  -- than by a read-then-write check in PHP. Two callbacks arriving at once
+  -- (the browser redirect and the webhook, say) would both pass a PHP check
+  -- and both insert; this makes the second one fail instead, which is what
+  -- the code catches to return the order that already exists.
+  -- NULL is still allowed many times over, which is what MySQL does for a
+  -- UNIQUE index, so pre-Paystack rows are unaffected.
+  UNIQUE KEY `reference` (`reference`),
   KEY `customer_id` (`customer_id`),
   KEY `order_id` (`order_id`),
   CONSTRAINT `payment_ibfk_1` FOREIGN KEY (`customer_id`)

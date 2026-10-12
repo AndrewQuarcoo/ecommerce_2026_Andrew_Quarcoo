@@ -9,6 +9,7 @@
 
 require_once __DIR__ . '/../classes/CartClass.php';
 require_once __DIR__ . '/../classes/ProductClass.php';
+require_once __DIR__ . '/../core/paystack.php';
 
 class CartController
 {
@@ -92,6 +93,59 @@ class CartController
     public function processPayment($customerId, $ip, $reference, $amount)
     {
         return $this->cart->processPayment($customerId, $ip, $reference, $amount);
+    }
+
+    /**
+     * Find and record a payment that succeeded but never reached us.
+     *
+     * The gap this closes: the customer pays, then closes the tab before
+     * Paystack's callback redirects them back. The charge went through, but
+     * the browser never told us, so no order exists — and their cart is still
+     * full, so the obvious next thing they do is pay a second time.
+     *
+     * So before offering the Pay button again, ask Paystack whether this
+     * customer already has a successful charge we have not recorded. The
+     * amount must equal the current cart total: if they changed the cart
+     * after paying, the old charge no longer corresponds to what is in front
+     * of them, and silently turning it into an order for different goods
+     * would be worse than asking them to pay.
+     *
+     * A controller is the right home for this — it coordinates the Paystack
+     * client (core/paystack.php) and the model, and contains no SQL itself.
+     *
+     * @return int|null the recovered order id, or null if there was nothing
+     */
+    public function recoverUnrecordedPayment($customerId, $email, $ip)
+    {
+        if (!paystack_configured()) {
+            return null;
+        }
+
+        $total = round($this->getCartTotal($ip), 2);
+        if ($total <= 0) {
+            return null;                       // nothing to reconcile against
+        }
+        $expectedMinor = (int) round($total * 100);
+
+        foreach (paystack_recent_successful($email) as $tx) {
+            if ($tx['reference'] === '' || $tx['currency'] !== PAYSTACK_CURRENCY) {
+                continue;
+            }
+            if ($tx['amount'] !== $expectedMinor) {
+                continue;                      // not this cart
+            }
+            if ($this->getPaymentByReference($tx['reference'])) {
+                continue;                      // already recorded
+            }
+
+            $orderId = $this->processPayment($customerId, $ip, $tx['reference'], $total);
+            if ($orderId) {
+                log_error('Recovered an unrecorded payment: order ' . $orderId
+                          . ' from ref=' . $tx['reference']);
+                return (int) $orderId;
+            }
+        }
+        return null;
     }
 
     public function getPaymentByReference($reference)

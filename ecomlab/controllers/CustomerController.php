@@ -63,6 +63,11 @@ class CustomerController
      *
      * @return array the customer row on success, or ['success'=>false,'error'=>'...']
      */
+    public function getCustomerById($id)
+    {
+        return $this->customer->getCustomerById($id);
+    }
+
     public function login($email, $pass)
     {
         $row = $this->customer->login($email, $pass);
